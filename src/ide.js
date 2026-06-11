@@ -12,9 +12,55 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { progress } from "./state.js";
+import { currentPhase } from "./phases.js";
 
 const START = "<!-- pm-partner:start -->";
 const END = "<!-- pm-partner:end -->";
+const STATE_START = "<!-- pm-partner:state:start -->";
+const STATE_END = "<!-- pm-partner:state:end -->";
+
+// Every major agentic IDE that reads a context file at session start.
+// Detection is conservative: only write to files/dirs that already exist —
+// except Claude (primary target), which we always write to.
+const AGENTS = [
+  {
+    name: "claude",
+    detect: (r) => fs.existsSync(path.join(r, ".claude")) || fs.existsSync(path.join(r, "CLAUDE.md")),
+    file: (r) => path.join(r, "CLAUDE.md"),
+  },
+  {
+    name: "codex",
+    detect: (r) => fs.existsSync(path.join(r, "AGENTS.md")),
+    file: (r) => path.join(r, "AGENTS.md"),
+  },
+  {
+    name: "cursor",
+    detect: (r) => fs.existsSync(path.join(r, ".cursor")) || fs.existsSync(path.join(r, ".cursorrules")),
+    file: (r) => {
+      if (fs.existsSync(path.join(r, ".cursor"))) {
+        fs.mkdirSync(path.join(r, ".cursor", "rules"), { recursive: true });
+        return path.join(r, ".cursor", "rules", "pm-partner.md");
+      }
+      return path.join(r, ".cursorrules");
+    },
+  },
+  {
+    name: "windsurf",
+    detect: (r) => fs.existsSync(path.join(r, ".windsurfrules")) || fs.existsSync(path.join(r, ".windsurf")),
+    file: (r) => path.join(r, ".windsurfrules"),
+  },
+  {
+    name: "copilot",
+    detect: (r) => fs.existsSync(path.join(r, ".github", "copilot-instructions.md")),
+    file: (r) => path.join(r, ".github", "copilot-instructions.md"),
+  },
+  {
+    name: "gemini",
+    detect: (r) => fs.existsSync(path.join(r, "GEMINI.md")),
+    file: (r) => path.join(r, "GEMINI.md"),
+  },
+];
 
 function claudeBlock(recapCmd) {
   return `${START}
@@ -89,6 +135,59 @@ export function installSessionHook(projectRoot, recapCmd) {
 // from ever failing a session.
 export function recapCommand(cliPath) {
   return `command -v pmp >/dev/null && pmp recap || '${process.execPath}' '${cliPath}' recap || true`;
+}
+
+function stateBlock(state) {
+  const { done, total, pct } = progress(state);
+  const ph = currentPhase(state);
+  const blocked = state.deliverables.filter((d) => d.status === "blocked");
+  const doing   = state.deliverables.filter((d) => d.status === "doing");
+  const todo    = state.deliverables.filter((d) => d.status === "todo");
+
+  const lines = [
+    STATE_START,
+    `## PM Partner — Live Project State`,
+    `*Auto-updated at session start — do not edit this block.*`,
+    ``,
+    `- **Project:** ${state.project.name}`,
+    `- **Phase:** ${ph.n} of 8 — ${ph.title}`,
+    `- **Progress:** ${done}/${total} deliverables shipped (${pct}%)`,
+    `- **Scope:** ${state.scope.frozen ? "Frozen ❄" : "Open"}`,
+  ];
+
+  if (doing.length)
+    lines.push(`- **In progress:** ${doing.map((d) => `${d.id} — ${d.title}`).join(", ")}`);
+  if (blocked.length)
+    lines.push(`- **Blocked:** ${blocked.map((d) => `${d.id} — ${d.title}`).join(", ")}`);
+  if (todo.length)
+    lines.push(`- **Up next:** ${todo[0].id} — ${todo[0].title}`);
+
+  lines.push(``, `**Right now:** ${ph.hint}`, ``, STATE_END, ``);
+  return lines.join("\n");
+}
+
+function upsertBlock(content, block, s, e) {
+  if (content.includes(s)) {
+    return content.replace(
+      new RegExp(`${escapeRe(s)}[\\s\\S]*?${escapeRe(e)}\\n?`),
+      block,
+    );
+  }
+  return (content ? content.replace(/\n*$/, "\n\n") : "") + block;
+}
+
+export function writeStateBlock(projectRoot, state) {
+  const block = stateBlock(state);
+  for (const agent of AGENTS) {
+    try {
+      if (!agent.detect(projectRoot)) continue;
+      const filePath = agent.file(projectRoot);
+      const content = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : "";
+      fs.writeFileSync(filePath, upsertBlock(content, block, STATE_START, STATE_END));
+    } catch {
+      // never crash a session because a context file couldn't be written
+    }
+  }
 }
 
 function escapeRe(s) {
