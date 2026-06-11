@@ -67,7 +67,14 @@ function claudeBlock(recapCmd) {
 ## PM Partner — project completion discipline
 
 This project is managed by PM Partner (state: \`.pmpartner/project.json\`).
-**At the start of every session, run \`pmp recap\` and read it before doing anything else.** It detects the last session and says exactly where the project stands in the 8-phase method and the single next action. (Fallback if \`pmp\` isn't on PATH: \`${recapCmd}\`)
+
+**At the start of every conversation, before doing anything else:**
+1. Read the "PM Partner — Live Project State" block in this file.
+2. Confirm out loud in one sentence: what phase you're in and what the single next action is.
+3. Then wait for the user's instruction.
+
+This orients every session without the user having to explain where the project stands.
+(To refresh the state block at any point: run \`pmp recap\` or fallback \`${recapCmd}\`)
 
 Non-negotiable rules for working in this repo:
 
