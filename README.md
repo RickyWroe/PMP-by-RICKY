@@ -9,6 +9,24 @@
 
 ---
 
+## What this repo does — and what it doesn't
+
+**PMP is a command-line tool (`pmp`) you install into one project at a time.** It runs the project through an 8-phase completion method — define Done → break into deliverables → map dependencies → assign AI vs. human ownership → estimate effort & risk → freeze scope → daily feedback loops → retro — and refuses to let you skip steps, ship unverified work, or sneak in scope. Every day it sends one push notification with one action. Every time you open the project — terminal, IDE, AI agent — it recaps exactly where you stand. When everything ships, it makes you compare the result to the original goal, captures the lesson, and shuts itself off.
+
+**In scope:**
+- One person, one project, one finish line — installed per-project, deleted by completion
+- Solo builders, side projects, anything that keeps dying at 80%
+- Local-first: your data is one JSON file in your repo. No accounts, no cloud, no telemetry
+- AI-agent native: Claude Code, Codex, Cursor — anything with a shell can drive it
+
+**Out of scope (on purpose):**
+- Team PM — this is not Jira, Linear, or Asana. No boards, no assignees, no standups
+- Time tracking, Gantt charts, sprints with ceremonies — the only ceremony is showing up
+- Windows/Linux auto-notifications (the check-in works everywhere; the scheduled push is macOS `launchd` — wire `pmp checkin` into cron elsewhere)
+- Managing five projects at once. That's the disease, not the cure
+
+---
+
 ## 1. Why this exists
 
 You don't have a starting problem. You have a finishing problem.
@@ -98,7 +116,5 @@ pmp complete           # when everything ships: retro, lesson captured, push off
 **Actually run `pmp complete`.** The retro — did the result match the goal? what's the one lesson? — is phase 8, not a nice-to-have. Finishing without comparing outcome to intention is how you repeat the same project forever.
 
 ---
-
-MIT licensed. Built with [Claude Code](https://claude.com/claude-code).
 
 Now go ship D1.
