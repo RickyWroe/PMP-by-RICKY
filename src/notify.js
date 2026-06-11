@@ -59,6 +59,10 @@ function plistPath(label) {
   return path.join(os.homedir(), "Library", "LaunchAgents", `${label}.plist`);
 }
 
+function xmlEsc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 // Build a LaunchAgent that runs `pmp checkin --notify` at HH:MM every day,
 // pinned to this project's directory.
 export function buildPlist({ label, nodeBin, cliPath, projectRoot, hour, minute }) {
@@ -67,16 +71,16 @@ export function buildPlist({ label, nodeBin, cliPath, projectRoot, hour, minute 
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>${label}</string>
+  <string>${xmlEsc(label)}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>${nodeBin}</string>
-    <string>${cliPath}</string>
+    <string>${xmlEsc(nodeBin)}</string>
+    <string>${xmlEsc(cliPath)}</string>
     <string>checkin</string>
     <string>--notify</string>
   </array>
   <key>WorkingDirectory</key>
-  <string>${projectRoot}</string>
+  <string>${xmlEsc(projectRoot)}</string>
   <key>StartCalendarInterval</key>
   <dict>
     <key>Hour</key>
@@ -85,9 +89,9 @@ export function buildPlist({ label, nodeBin, cliPath, projectRoot, hour, minute 
     <integer>${minute}</integer>
   </dict>
   <key>StandardOutPath</key>
-  <string>${path.join(projectRoot, ".pmpartner", "checkin.log")}</string>
+  <string>${xmlEsc(path.join(projectRoot, ".pmpartner", "checkin.log"))}</string>
   <key>StandardErrorPath</key>
-  <string>${path.join(projectRoot, ".pmpartner", "checkin.log")}</string>
+  <string>${xmlEsc(path.join(projectRoot, ".pmpartner", "checkin.log"))}</string>
 </dict>
 </plist>
 `;
