@@ -24,7 +24,7 @@ cd ~/path/to/your-project
 pmp init
 ```
 
-`pmp init` asks for your outcome, your psychological profile, and a daily push time, then writes everything to `.pmpartner/project.json` in that project.
+`pmp init` asks for your outcome, your psychological profile, and a daily push time, then writes everything to `.pmpartner/project.json` in that project. It also installs the **IDE orientation layer**: a `CLAUDE.md` discipline block plus a Claude Code `SessionStart` hook, so every coding session in that project opens with `pmp recap` automatically.
 
 > Requires Node ≥ 18. Daily auto-push and spoken nudges use macOS (`launchd` + `say`); on other systems the check-in still works — wire `pmp checkin` into cron.
 
@@ -46,6 +46,45 @@ PM Partner walks the project through these and won't let you skip the setup that
 | 8 | **Compare outcome vs goal & improve** | Retro: did it match? what's the lesson? |
 
 `pmp status` always shows which phase you're really in (computed from state, not a checkbox you can lie to).
+
+---
+
+## Never lost: the session recap
+
+Open the project after a day — or a month — and run `pmp recap` (Claude Code runs it for you at session start via the installed hook):
+
+```
+  ◆ PM Partner — Launch Page
+  Last session: 3 days ago.
+
+  WHERE WE ARE: Phase 7/8 — Run feedback loops
+  PROGRESS:     40% (2/5 deliverables shipped) · due 2026-07-01 (20d left)
+  DONE MEANS:   Landing page live at real URL converting signups
+  SCOPE:        frozen ❄ · 2 parked ideas
+
+  SINCE LAST SESSION: shipped D2 · parked 1 idea
+
+  → NEXT ACTION: D3: Wire the form (AI can execute this — hand it to Claude Code). Done when: form posts to the API.
+```
+
+It detects the previous session, diffs exactly what changed, names the phase you're in, and surfaces the single next action. You can never open the IDE and feel lost about where the project stands.
+
+---
+
+## Never assume: discipline guards
+
+The methodology is enforced, not suggested. The CLI **refuses** moves that break PM best practice — and every refusal explains the *why* and the fix:
+
+| You try | PM Partner says no because |
+|---------|---------------------------|
+| Add a deliverable before "Done" is defined | We never break down work before the outcome exists (phase 1 first) |
+| Add a deliverable without a "done when" line | Without an acceptance criterion, "done" is a feeling, not a fact |
+| Reference a dependency that doesn't exist | We never plan against assumed work |
+| Freeze scope before the breakdown exists | Freezing vagueness locks in vagueness |
+| Mark `D3` done while `D2` is open | Out-of-order shipping means a wrong map or fake-done — human decision required |
+| `pmp ship D3` without verifying | Shipping requires checking the criterion: confirm interactively or pass `--yes` after verifying |
+
+Nothing is ever filled in by guesswork: missing plan data is asked for, never defaulted into existence.
 
 ---
 
@@ -116,8 +155,11 @@ PM Partner supports spoken nudges (`pmp init` → "Speak nudges aloud?", or `pmp
 
 ```
 .pmpartner/
-  project.json     # single source of truth (outcome, deliverables, log, retro)
+  project.json     # single source of truth (outcome, deliverables, log, sessions, retro)
   checkin.log      # output from the scheduled daily run
+CLAUDE.md          # PM discipline block for agents (managed between pm-partner markers)
+.claude/
+  settings.json    # SessionStart hook → pmp recap (merged non-destructively)
 ```
 
 Everything lives with the project and travels with it in git (commit `.pmpartner/project.json` if you want the history; it's git-ignored in *this* repo only to keep test runs clean).
