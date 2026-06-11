@@ -87,9 +87,14 @@ async function main() {
     case "-h":
     case "--help":
       return help();
+    case "version":
+    case "--version":
+    case "-v":
+      return cmdVersion();
     default:
       console.log(`Unknown command: ${cmd}\n`);
-      return help();
+      help();
+      process.exit(1);
   }
 }
 
@@ -744,6 +749,12 @@ function help() {
     · dependencies must exist                          · no shipping out of dependency order
     · no shipping without verifying the criterion      · frozen scope → ideas go to the parking lot
 `);
+}
+
+function cmdVersion() {
+  const pkgPath = new URL("../package.json", import.meta.url);
+  const { version } = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+  console.log(`pm-partner ${version}`);
 }
 
 function parseFlags(args) {
