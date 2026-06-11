@@ -6,6 +6,11 @@
   "bin": {
     "pmp": "bin/pmp.js"
   },
+  "files": [
+    "bin",
+    "src",
+    "shell"
+  ],
   "scripts": {
     "start": "node bin/pmp.js",
     "test": "node --test"
