@@ -1,177 +1,102 @@
-# PM Partner
+# PMP — PM Partner
 
-> An installable project-completion partner that lives inside your project and pushes you to finish it — with daily push notifications, an Agile-lite 8‑phase method, and coaching tuned to *why you don't finish things*.
-
-You install it once into a project. It stays in `.pmpartner/` until the project is **Done**, sends you a daily nudge surfacing the single next action, and on completion runs a retro comparing the result to your original goal.
-
-It is psychology-aware. Most project tools assume the problem is unclear work. For a lot of us the problem is the *relationship to finishing*: ADHD activation energy, perfectionism, OCD re-checking loops, fear of finishing, identity attachment, and runaway scope. PM Partner counters each of those directly.
+```
+█▀█ █▀▄▀█ █▀█
+█▀▀ █ ▀ █ █▀▀   finish what you started.
+```
 
 ---
 
-## Install
+## 1. Why this exists
+
+You don't have a starting problem. You have a finishing problem.
+
+The graveyard of side projects isn't full of bad ideas — it's full of good ideas abandoned at 80%, killed by the same six assassins every time: **ADHD** (the on-ramp is too steep), **perfectionism** ("not good enough yet" as a permanent state), **OCD loops** (checking it again won't make it more done), **fear of finishing** (what am I without this project?), **identity attachment** (if the project fails, *I* fail), and **scope creep** (every new idea is a tax on the finish line).
+
+Normal project tools assume the problem is unclear work. It almost never is. The problem is your *relationship to finishing* — so that's what PM Partner manages.
+
+**The promise:** install it once into a project, and it stays there until the project is *Done*. Every day it pushes you one notification with one action. Every time you open the project — terminal, IDE, AI agent — it tells you exactly where you stand, so you never feel lost. And it enforces real project management discipline so ruthlessly that the project physically cannot drift, bloat, or quietly die.
+
+It never assumes. It never lets you lie to it. It never asks you to make more than one decision a day.
+
+---
+
+## 2. How to use it
+
+**Install once per machine:**
 
 ```bash
-git clone <this-repo> pm-partner
-cd pm-partner
-./install.sh            # links `pmp` into ~/.local/bin
-# or: ./install.sh --link   (uses npm link)
+git clone <this-repo> pm-partner && cd pm-partner
+./install.sh          # links `pmp` into ~/.local/bin
+pmp shell install     # optional: every terminal greets you with the recap
 ```
 
-Then, inside the project you actually want to finish:
+**Install once per project:**
 
 ```bash
-cd ~/path/to/your-project
+cd ~/the-project-you-keep-not-finishing
 pmp init
 ```
 
-`pmp init` asks for your outcome, your psychological profile, and a daily push time, then writes everything to `.pmpartner/project.json` in that project. It also installs the **IDE orientation layer**: a `CLAUDE.md` discipline block plus a Claude Code `SessionStart` hook, so every coding session in that project opens with `pmp recap` automatically.
+It asks you five things: the project name, which of the six assassins are yours, what *Done* means in one sentence, one checkable done-criterion, and what time you want your daily push. It also wires itself into your IDE — Claude Code sessions and terminals in that folder will open with a recap from then on.
 
-> Requires Node ≥ 18. Daily auto-push and spoken nudges use macOS (`launchd` + `say`); on other systems the check-in still works — wire `pmp checkin` into cron.
-
----
-
-## The 8 phases
-
-PM Partner walks the project through these and won't let you skip the setup that prevents drift later.
-
-| # | Phase | What it locks down |
-|---|-------|--------------------|
-| 1 | **Define the outcome** | One sentence for "Done" + checkable criteria + anti-goals |
-| 2 | **Break into deliverables** | Concrete, shippable pieces with acceptance lines |
-| 3 | **Map dependencies** | What must come before what |
-| 4 | **Assign ownership** | Per piece: can **AI** execute it, or does it need **human** strategy & judgment? |
-| 5 | **Estimate effort & risk** | S/M/L + low/med/high |
-| 6 | **Create the execution system** | Freeze scope, set cadence, turn on the daily push |
-| 7 | **Run feedback loops** | Daily check-in → next smallest action → log it |
-| 8 | **Compare outcome vs goal & improve** | Retro: did it match? what's the lesson? |
-
-`pmp status` always shows which phase you're really in (computed from state, not a checkbox you can lie to).
-
----
-
-## Never lost: the session recap
-
-Open the project after a day — or a month — and run `pmp recap` (Claude Code runs it for you at session start via the installed hook):
-
-```
-  ◆ PM Partner — Launch Page
-  Last session: 3 days ago.
-
-  WHERE WE ARE: Phase 7/8 — Run feedback loops
-  PROGRESS:     40% (2/5 deliverables shipped) · due 2026-07-01 (20d left)
-  DONE MEANS:   Landing page live at real URL converting signups
-  SCOPE:        frozen ❄ · 2 parked ideas
-
-  SINCE LAST SESSION: shipped D2 · parked 1 idea
-
-  → NEXT ACTION: D3: Wire the form (AI can execute this — hand it to Claude Code). Done when: form posts to the API.
-```
-
-It detects the previous session, diffs exactly what changed, names the phase you're in, and surfaces the single next action. You can never open the IDE and feel lost about where the project stands.
-
-Three layers deliver it automatically:
-
-1. **Claude Code sessions** — the `SessionStart` hook installed by `pmp init` runs the recap before any work starts.
-2. **Any terminal** (IDE terminals included) — run `pmp shell install` once, globally; every new shell opened inside *any* managed project, or any `cd` into one, prints the recap. Silent everywhere else, greets once per project per shell.
-3. **Any other AI agent** — the `CLAUDE.md` block tells it to run `pmp recap` first and follow the discipline rules.
-
----
-
-## Never assume: discipline guards
-
-The methodology is enforced, not suggested. The CLI **refuses** moves that break PM best practice — and every refusal explains the *why* and the fix:
-
-| You try | PM Partner says no because |
-|---------|---------------------------|
-| Add a deliverable before "Done" is defined | We never break down work before the outcome exists (phase 1 first) |
-| Add a deliverable without a "done when" line | Without an acceptance criterion, "done" is a feeling, not a fact |
-| Reference a dependency that doesn't exist | We never plan against assumed work |
-| Freeze scope before the breakdown exists | Freezing vagueness locks in vagueness |
-| Mark `D3` done while `D2` is open | Out-of-order shipping means a wrong map or fake-done — human decision required |
-| `pmp ship D3` without verifying | Shipping requires checking the criterion: confirm interactively or pass `--yes` after verifying |
-
-Nothing is ever filled in by guesswork: missing plan data is asked for, never defaulted into existence.
-
----
-
-## Daily use
-
-The whole point is **one decision per day**:
+**Then set up the plan (the 8 phases, enforced in order):**
 
 ```bash
-pmp checkin
+pmp deliverable add    # break Done into pieces — each needs a "done when" line
+pmp scope freeze       # lock the edges. New ideas → parking lot, not the plan
+pmp notify setup       # turn on the daily push (macOS launchd, 9:00 by default)
 ```
 
-```
-  ▌ your-project
-  ▌ ████████░░░░░░░░░░░░  40%  (2/5 shipped) · phase 7/8
-
-  → For the next 10 minutes only: D3: wire up the contact form (AI can execute this — hand it to Claude Code). Done when: form posts to the API.
-
-  “You don't need motivation, you need a 10-minute on-ramp. Start the timer, not the project.”
-
-  · One thing on screen. Close the other tabs. The next action is the ONLY action.
-  · Scope is frozen. New ideas go to the parking lot, not the plan.
-
-  tuned for: ADHD, Poor scope control
-```
-
-`pmp checkin --notify` also fires a macOS banner (and speaks it if voice is on). The daily `launchd` job runs exactly this for you.
-
-Other everyday commands:
+**Then just live your life.** Once a day, a notification surfaces the single next action. When you sit down to work:
 
 ```bash
-pmp next                 # just the next action, nothing else
-pmp ship D3              # mark a deliverable done
-pmp scope park "idea"    # capture a new idea WITHOUT touching scope
-pmp status               # full picture
-pmp complete             # when all deliverables are done → retro
+pmp recap              # where are we? (runs automatically in IDE/terminal)
+pmp ship D3 --yes      # mark a deliverable done — after verifying its criterion
+pmp scope park "idea"  # capture the shiny new thing WITHOUT touching scope
+pmp complete           # when everything ships: retro, lesson captured, push off
 ```
 
----
-
-## How the psychology engine works
-
-Set your profile at init or with `pmp profile set adhd,perfectionism`. Each profile adds:
-
-- a **reframe** (rotates daily so it doesn't go stale),
-- a **guardrail** rule that protects the project from that failure mode,
-- a **shrink** that rewrites the next action into its least-threatening form.
-
-| Profile | Core counter-move |
-|---------|-------------------|
-| `adhd` | 10-minute on-ramp, one thing on screen, start the timer not the project |
-| `perfectionism` | ship the B+, "good enough to show someone," revise later *on purpose* |
-| `ocd` | each criterion verified **once**, no re-opening checked boxes |
-| `fear_of_finishing` | finishing graduates you; "just one more" near the end is the fear talking |
-| `identity_attachment` | the work is something you made, not who you are; outcome is data, not a verdict |
-| `poor_scope_control` | every new idea is a tax on finishing → park it, protect the frozen line |
-
-Multiple profiles stack — all guardrails apply; reframes rotate.
+`pmp help` shows everything else. `pmp` alone shows status.
 
 ---
 
-## Voice
+## 3. How it was built
 
-PM Partner supports spoken nudges (`pmp init` → "Speak nudges aloud?", or `pmp notify` with voice on). It's also built to be driven by **Claude Code**: ask Claude to run `pmp checkin` and read it back to you, or talk through a deliverable and let Claude update state with `pmp deliverable ...`. The state file is plain JSON so any agent can read and edit it.
+**Zero dependencies, on purpose.** It's plain Node (≥18) and nothing else — no framework, no database, no daemon. The entire project state lives in one human-readable JSON file (`.pmpartner/project.json`) inside *your* project, so it travels with your repo and any tool can read it.
 
----
+**The phase you're in is computed, never claimed.** The 8 phases (define the outcome → break into deliverables → map dependencies → assign AI vs. human ownership → estimate effort & risk → build the execution system → run feedback loops → compare outcome vs. goal) are each a predicate over the state file. `pmp status` derives where you really are. There is no checkbox to lie to.
 
-## Files
+**The discipline is code, not advice.** A guards layer refuses — with the reason and the fix — anything that breaks PM best practice: deliverables before *Done* is defined, work without an acceptance criterion, phantom dependencies, shipping out of dependency order, marking things done without verification, freezing vagueness.
 
-```
-.pmpartner/
-  project.json     # single source of truth (outcome, deliverables, log, sessions, retro)
-  checkin.log      # output from the scheduled daily run
-CLAUDE.md          # PM discipline block for agents (managed between pm-partner markers)
-.claude/
-  settings.json    # SessionStart hook → pmp recap (merged non-destructively)
-```
+**The psychology engine is the core, not a feature.** Each profile contributes a daily-rotating reframe, a standing guardrail, and a "shrink" that rewrites today's action into its least-threatening form ("for the next 10 minutes only: …"). Profiles stack.
 
-Everything lives with the project and travels with it in git (commit `.pmpartner/project.json` if you want the history; it's git-ignored in *this* repo only to keep test runs clean).
+**The pushy parts are just the OS.** Daily notifications are a macOS `launchd` agent + `osascript` banner (optional spoken nudge via `say`). The terminal greeting is twenty lines of zsh. The IDE recap is a Claude Code `SessionStart` hook. Nothing to keep running; nothing to break.
+
+**Built to be driven by agents.** Every command that writes state has headless flags (`pmp init --outcome "..." --criterion "..."`), so Claude Code — or Codex, Cursor, anything with a shell — can operate it on your behalf, including by voice. The one thing no agent can do is invent your outcome. That's yours.
 
 ---
 
-## License
+## 4. Best practices
 
-MIT
+**Write "Done" as a fact, not a feeling.** "Landing page is live at the real URL" beats "landing page is basically finished." If you can't check it, it can't be done.
+
+**Make deliverables small and the first one tiny.** Momentum beats optimality. The check-in deliberately picks the smallest actionable thing — help it help you.
+
+**Freeze scope earlier than feels comfortable.** An open edge never finishes. The parking lot is not a trash can: parked ideas survive to the retro and seed the *next* project. You lose nothing. You protect the finish.
+
+**Park, don't argue.** When the shiny idea arrives mid-session (it will), `pmp scope park` takes four seconds. Negotiating with yourself takes the afternoon.
+
+**Verify once, then keep your hands off.** Each "done when" line gets checked exactly one time. Re-opening a checked box is the loop talking, not quality assurance.
+
+**Let AI take the `ai`-owned deliverables.** You marked them mechanical for a reason. Your judgment is the scarce resource — spend it on the `human` ones.
+
+**Show up badly rather than not at all.** A check-in where you ship nothing still counts: the recap stays honest, the chain stays alive, and "we restart small" is built into the copy on purpose.
+
+**Actually run `pmp complete`.** The retro — did the result match the goal? what's the one lesson? — is phase 8, not a nice-to-have. Finishing without comparing outcome to intention is how you repeat the same project forever.
+
+---
+
+MIT licensed. Built with [Claude Code](https://claude.com/claude-code).
+
+Now go ship D1.
