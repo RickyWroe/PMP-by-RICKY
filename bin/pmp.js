@@ -35,7 +35,7 @@ import {
   validateDependencies,
   requireDepsDone,
 } from "../src/guards.js";
-import { installClaudeMd, installSessionHook, recapCommand } from "../src/ide.js";
+import { installClaudeMd, installSessionHook, recapCommand, writeStateBlock } from "../src/ide.js";
 
 const CLI_PATH = url.fileURLToPath(import.meta.url);
 const argv = process.argv.slice(2);
@@ -248,6 +248,7 @@ function cmdRecap() {
   console.log(renderRecap(recap));
   recordSession(state);
   save(state);
+  writeStateBlock(process.cwd(), state);
 }
 
 // ---- next / checkin --------------------------------------------------------
