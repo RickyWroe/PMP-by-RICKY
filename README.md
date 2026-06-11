@@ -69,6 +69,12 @@ Open the project after a day — or a month — and run `pmp recap` (Claude Code
 
 It detects the previous session, diffs exactly what changed, names the phase you're in, and surfaces the single next action. You can never open the IDE and feel lost about where the project stands.
 
+Three layers deliver it automatically:
+
+1. **Claude Code sessions** — the `SessionStart` hook installed by `pmp init` runs the recap before any work starts.
+2. **Any terminal** (IDE terminals included) — run `pmp shell install` once, globally; every new shell opened inside *any* managed project, or any `cd` into one, prints the recap. Silent everywhere else, greets once per project per shell.
+3. **Any other AI agent** — the `CLAUDE.md` block tells it to run `pmp recap` first and follow the discipline rules.
+
 ---
 
 ## Never assume: discipline guards

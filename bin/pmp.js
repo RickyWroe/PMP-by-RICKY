@@ -77,6 +77,8 @@ async function main() {
       return cmdNotify(rest);
     case "ide":
       return cmdIde();
+    case "shell":
+      return cmdShell(rest);
     case "log":
       return cmdLog();
     case "complete":
@@ -578,6 +580,52 @@ function cmdIde() {
   console.log("\n  Every new IDE session here will now open with `pmp recap`.\n");
 }
 
+// ---- shell (terminal greeter) ------------------------------------------------
+
+// Wires shell/pmp.zsh into ~/.zshrc so any terminal opened inside a managed
+// project (IDE terminals included) greets you with the recap. This is global,
+// one-time: it works for every PM-Partner project, not just this one.
+async function cmdShell(args) {
+  const os = await import("node:os");
+  const zshrc = path.join(os.homedir(), ".zshrc");
+  const snippet = path.join(path.dirname(CLI_PATH), "..", "shell", "pmp.zsh");
+  const START = "# >>> pm-partner >>>";
+  const END = "# <<< pm-partner <<<";
+  const block = `${START}\n[ -f '${snippet}' ] && source '${snippet}'\n${END}\n`;
+
+  let content = fs.existsSync(zshrc) ? fs.readFileSync(zshrc, "utf8") : "";
+
+  if (args[0] === "uninstall") {
+    if (!content.includes(START)) {
+      console.log("\n  Terminal greeter wasn't installed. Nothing to do.\n");
+      return;
+    }
+    content = content.replace(new RegExp(`\\n?${escRe(START)}[\\s\\S]*?${escRe(END)}\\n?`), "\n");
+    fs.writeFileSync(zshrc, content);
+    console.log("\n  ✓ Terminal greeter removed from ~/.zshrc.\n");
+    return;
+  }
+
+  // install (default)
+  if (content.includes(START)) {
+    content = content.replace(new RegExp(`${escRe(START)}[\\s\\S]*?${escRe(END)}\\n?`), block);
+    fs.writeFileSync(zshrc, content);
+    console.log("\n  ✓ Terminal greeter already installed — refreshed in ~/.zshrc.");
+  } else {
+    fs.writeFileSync(zshrc, (content ? content.replace(/\n*$/, "\n\n") : "") + block);
+    console.log("\n  ✓ Terminal greeter installed in ~/.zshrc.");
+  }
+  console.log(
+    "    Every NEW terminal opened inside a PM-Partner project (IDE terminals too)\n" +
+      "    will now greet you with `pmp recap`. Open a new terminal — or run\n" +
+      "    `source ~/.zshrc` in this one — to activate it.\n",
+  );
+}
+
+function escRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // ---- log -------------------------------------------------------------------
 
 function cmdLog() {
@@ -686,6 +734,8 @@ function help() {
     pmp scope [freeze|park "..."|list]
     pmp notify [setup|off|test]
     pmp ide                      (Re)install the IDE session-recap hook + CLAUDE.md rules
+    pmp shell install            Greet with recap in ANY terminal opened in a managed
+                                 project (one-time, global, IDE terminals included)
     pmp log                      Check-in history
     pmp complete                 Retro + close out (phase 8)
 
