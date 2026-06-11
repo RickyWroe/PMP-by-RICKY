@@ -1,0 +1,25 @@
+{
+  "name": "pm-partner",
+  "version": "0.1.0",
+  "description": "An installable project-completion partner that lives inside your project and pushes you to finish it. Psychology-aware, daily nudges, Agile-lite.",
+  "type": "module",
+  "bin": {
+    "pmp": "bin/pmp.js"
+  },
+  "scripts": {
+    "start": "node bin/pmp.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "project-management",
+    "adhd",
+    "productivity",
+    "agile",
+    "completion",
+    "accountability"
+  ],
+  "license": "MIT"
+}
