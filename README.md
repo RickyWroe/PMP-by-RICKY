@@ -43,25 +43,24 @@ It never assumes. It never lets you lie to it. It never asks you to make more th
 
 ## 2. How to use it
 
-**Install once per machine.** This puts the `pmp` command on your PATH. Optionally run `pmp shell install` after — it wires a recap greeting into every terminal you open inside a managed project.
+**Install once, works everywhere.** Drops `pmp` onto your PATH. Run `pmp shell install` after — it makes every terminal auto-recap your project the moment you open the folder.
 
 ```bash
 npm install -g pm-partner
 pmp shell install
 ```
 
-> Or try without installing: `npx pm-partner@latest`
+> Don't want the global install? `npx pm-partner@latest` works too.
 
-**Install once per project.** Run this inside the project you keep not finishing.
+**Drop it into your project.** Open your terminal inside the project and run:
 
 ```bash
-cd ~/the-project-you-keep-not-finishing
 pmp init
 ```
 
-It asks you five things: the project name, which of the six assassins are yours, what *Done* means in one sentence, one checkable done-criterion, and what time you want your daily push. It also wires itself into your IDE — Claude Code sessions and terminals in that folder will open with a recap from then on.
+It asks you five things: what the project's called, which of the six blockers hit you hardest, what Done actually looks like in one sentence, one checkable criterion you can verify, and when you want your daily nudge. It also wires into your IDE — every Claude Code or Cursor session opens straight to a recap.
 
-**Set up the plan.** Break Done into deliverables (each needs a "done when" acceptance line), lock scope so new ideas go to the parking lot instead of the plan, then turn on the daily push.
+**Wire up the plan.** Each deliverable needs a "done when" line — no criterion, no deliverable. Lock scope when the list feels complete. Flip on the daily push.
 
 ```bash
 pmp deliverable add
@@ -69,16 +68,16 @@ pmp scope freeze
 pmp notify setup
 ```
 
-**Then just live your life.** Once a day, a notification surfaces the single next action. `pmp recap` shows where you stand — it runs automatically when you open the project in your IDE. `pmp ship` marks a deliverable done after you've verified its criterion. `pmp scope park` captures new ideas without touching the plan. `pmp complete` closes out the project with a retro when everything ships.
+**Then just show up.** One nudge a day, one action. `pmp recap` tells you exactly where you stand — runs automatically when you open the project in your IDE. Ship a deliverable once you've verified its criterion. Park shiny new ideas so they don't blow up your scope. Run complete when everything ships.
 
 ```bash
 pmp recap
-pmp ship D3 --yes
-pmp scope park "idea"
+pmp ship D1 --yes
+pmp scope park "dark mode"
 pmp complete
 ```
 
-`pmp help` shows everything else. `pmp` alone shows status.
+`pmp help` for the full command list. `pmp` alone shows status.
 
 ---
 
