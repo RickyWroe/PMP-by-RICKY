@@ -46,8 +46,7 @@ It never assumes. It never lets you lie to it. It never asks you to make more th
 **Install once per machine:**
 
 ```bash
-git clone https://github.com/RickyWroe/PMP-by-RICKY.git && cd PMP-by-RICKY
-./install.sh          # links `pmp` into ~/.local/bin
+git clone https://github.com/RickyWroe/PMP-by-RICKY.git && cd PMP-by-RICKY && ./install.sh
 pmp shell install     # optional: every terminal greets you with the recap
 ```
 
