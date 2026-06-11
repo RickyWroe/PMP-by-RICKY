@@ -27,6 +27,78 @@
 
 ---
 
+## In action
+
+**Every time you open the project, your IDE auto-runs `pmp recap`.** Your agent sees this before it touches a single line of code:
+
+```
+  █▀█ █▀▄▀█ █▀█   landing-page
+  █▀▀ █ ▀ █ █▀▀   last session 2 days ago — here's what changed
+
+  WHERE WE ARE  Phase 7/8 — Run feedback loops
+  PROGRESS      25% (1/4 deliverables shipped)
+  DONE MEANS    Ship a landing page that converts visitors to waitlist signups
+  SCOPE         frozen ❄
+
+  → NEXT ACTION  D2: Build the page (AI can execute this — hand it to Claude Code).
+                 Done when: Page renders correctly on mobile and desktop.
+```
+
+**`pmp status` shows the full picture — phases ticked, deliverables mapped:**
+
+```
+  landing-page
+  25%  1/4 deliverables shipped
+
+  Phases:
+    ✓ 1. Define the outcome
+    ✓ 2. Break into deliverables
+    ✓ 3. Map dependencies
+    ✓ 4. Assign ownership (AI vs human)
+    ✓ 5. Estimate effort & risk
+    ✓ 6. Create the execution system
+    ▸ 7. Run feedback loops
+    · 8. Compare outcome vs goal & improve
+
+  Deliverables:
+    ● D1 [you/M/low] Design and copy
+    ◐ D2 [AI/M/low]  Build the page        ←D1
+    ○ D3 [AI/S/low]  Wire up the form      ←D2
+    ○ D4 [you/S/med] Deploy to prod        ←D3
+```
+
+**`pmp checkin` — one nudge, one action, every day:**
+
+```
+  ▌ landing-page
+  ▌ █████░░░░░░░░░░░░░░░  25%  (1/4 shipped) · phase 7/8
+
+  → D2: Build the page (AI can execute this — hand it to Claude Code).
+    Done when: Page renders correctly on mobile and desktop.
+
+  "Show up, ship the next smallest thing, log it. That's the whole game."
+```
+
+**What your AI agent reads at session start** — written automatically into `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/`, `.windsurfrules`, and any other agent context file it detects:
+
+```
+## PM Partner — Live Project State
+*Auto-updated at session start — do not edit this block.*
+
+- **Project:** landing-page
+- **Phase:** 7 of 8 — Run feedback loops
+- **Progress:** 1/4 deliverables shipped (25%)
+- **Scope:** Frozen ❄
+- **In progress:** D2 — Build the page
+- **Up next:** D3 — Wire up the form
+
+**Right now:** Run `pmp checkin` each day. The Partner picks the next action and logs progress.
+```
+
+The agent already knows where you are before you say a word.
+
+---
+
 ## 1. Why this exists
 
 You don't have a starting problem. You have a finishing problem.
