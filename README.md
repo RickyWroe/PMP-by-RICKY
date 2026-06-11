@@ -43,16 +43,16 @@ It never assumes. It never lets you lie to it. It never asks you to make more th
 
 ## 2. How to use it
 
-**Install once per machine:**
+**Install once per machine.** This puts the `pmp` command on your PATH. Optionally run `pmp shell install` after — it wires a recap greeting into every terminal you open inside a managed project.
 
 ```bash
 npm install -g pm-partner
-pmp shell install     # optional: every terminal greets you with the recap
+pmp shell install
 ```
 
-> Or try it without installing: `npx pm-partner@latest`
+> Or try without installing: `npx pm-partner@latest`
 
-**Install once per project:**
+**Install once per project.** Run this inside the project you keep not finishing.
 
 ```bash
 cd ~/the-project-you-keep-not-finishing
@@ -61,21 +61,21 @@ pmp init
 
 It asks you five things: the project name, which of the six assassins are yours, what *Done* means in one sentence, one checkable done-criterion, and what time you want your daily push. It also wires itself into your IDE — Claude Code sessions and terminals in that folder will open with a recap from then on.
 
-**Then set up the plan (the 8 phases, enforced in order):**
+**Set up the plan.** Break Done into deliverables (each needs a "done when" acceptance line), lock scope so new ideas go to the parking lot instead of the plan, then turn on the daily push.
 
 ```bash
-pmp deliverable add    # break Done into pieces — each needs a "done when" line
-pmp scope freeze       # lock the edges. New ideas → parking lot, not the plan
-pmp notify setup       # turn on the daily push (macOS launchd, 9:00 by default)
+pmp deliverable add
+pmp scope freeze
+pmp notify setup
 ```
 
-**Then just live your life.** Once a day, a notification surfaces the single next action. When you sit down to work:
+**Then just live your life.** Once a day, a notification surfaces the single next action. `pmp recap` shows where you stand — it runs automatically when you open the project in your IDE. `pmp ship` marks a deliverable done after you've verified its criterion. `pmp scope park` captures new ideas without touching the plan. `pmp complete` closes out the project with a retro when everything ships.
 
 ```bash
-pmp recap              # where are we? (runs automatically in IDE/terminal)
-pmp ship D3 --yes      # mark a deliverable done — after verifying its criterion
-pmp scope park "idea"  # capture the shiny new thing WITHOUT touching scope
-pmp complete           # when everything ships: retro, lesson captured, push off
+pmp recap
+pmp ship D3 --yes
+pmp scope park "idea"
+pmp complete
 ```
 
 `pmp help` shows everything else. `pmp` alone shows status.
