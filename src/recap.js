@@ -8,6 +8,7 @@
 import { progress } from "./state.js";
 import { currentPhase, PHASES } from "./phases.js";
 import { chooseNextAction } from "./checkin.js";
+import { purple, purpleBold, dim, bold, banner } from "./style.js";
 
 export function takeSnapshot(state) {
   return {
@@ -68,44 +69,48 @@ export function recordSession(state) {
 
 export function renderRecap(r) {
   const L = [];
+  const [b1, b2] = banner();
+  const label = (s) => dim(s.padEnd(14));
+
   L.push("");
-  L.push(`  ◆ PM Partner — ${r.project}`);
-  if (r.firstSession) {
-    L.push(`  First session on this project. Here's the map:`);
-  } else {
-    L.push(`  Last session: ${r.gap} ago.`);
-  }
+  L.push(`  ${b1}   ${bold(r.project)}`);
+  L.push(
+    `  ${b2}   ${dim(
+      r.firstSession ? "first session — here's the map" : `last session: ${r.gap} ago`,
+    )}`,
+  );
   L.push("");
 
   // Where we are in the method — the one line that kills "lost" feeling.
-  L.push(`  WHERE WE ARE: Phase ${r.phase.n}/8 — ${r.phase.title}`);
+  L.push(`  ${label("WHERE WE ARE")}${purple(`Phase ${r.phase.n}/8`)} — ${r.phase.title}`);
   const p = r.progress;
-  let prog = `  PROGRESS:     ${p.pct}% (${p.done}/${p.total} deliverables shipped)`;
+  let prog = `${purple(`${p.pct}%`)} (${p.done}/${p.total} deliverables shipped)`;
   if (r.deadline) {
-    prog += ` · due ${r.deadline}`;
+    prog += dim(` · due ${r.deadline}`);
     if (r.daysLeft !== null)
-      prog += r.daysLeft >= 0 ? ` (${r.daysLeft}d left)` : ` (${-r.daysLeft}d OVERDUE)`;
+      prog += r.daysLeft >= 0 ? dim(` (${r.daysLeft}d left)`) : bold(` (${-r.daysLeft}d OVERDUE)`);
   }
-  L.push(prog);
-  if (r.outcome) L.push(`  DONE MEANS:   ${r.outcome}`);
+  L.push(`  ${label("PROGRESS")}${prog}`);
+  if (r.outcome) L.push(`  ${label("DONE MEANS")}${r.outcome}`);
   L.push(
-    `  SCOPE:        ${r.scopeFrozen ? "frozen ❄" : "OPEN (freeze it: pmp scope freeze)"}` +
-      (r.parked ? ` · ${r.parked} parked idea${r.parked > 1 ? "s" : ""}` : ""),
+    `  ${label("SCOPE")}${r.scopeFrozen ? purple("frozen ❄") : bold("OPEN") + dim(" (freeze it: pmp scope freeze)")}` +
+      (r.parked ? dim(` · ${r.parked} parked idea${r.parked > 1 ? "s" : ""}`) : ""),
   );
   L.push("");
 
   if (!r.firstSession) {
     L.push(
-      r.changes.length
-        ? `  SINCE LAST SESSION: ${r.changes.join(" · ")}`
-        : `  SINCE LAST SESSION: no recorded progress — that's fine, we restart small.`,
+      `  ${label("SINCE LAST")}` +
+        (r.changes.length
+          ? r.changes.join(dim(" · "))
+          : dim("no recorded progress — that's fine, we restart small.")),
     );
     L.push("");
   }
 
-  L.push(`  → NEXT ACTION: ${r.next.text}`);
+  L.push(`  ${purpleBold("→ NEXT ACTION")}  ${bold(r.next.text)}`);
   L.push("");
-  L.push(`  (phase guide: ${r.phase.goal})`);
+  L.push(`  ${dim(`phase guide: ${r.phase.goal}`)}`);
   L.push("");
   return L.join("\n");
 }
