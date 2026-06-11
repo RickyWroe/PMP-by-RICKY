@@ -117,4 +117,6 @@ pmp complete           # when everything ships: retro, lesson captured, push off
 
 ---
 
+[MIT licensed](LICENSE). © Ricky Manyari (RICKY).
+
 Now go ship D1.
