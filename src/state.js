@@ -57,6 +57,12 @@ export function emptyState(name = path.basename(process.cwd())) {
     },
     // Phase 7 — Feedback loops: every check-in is logged here
     log: [],
+    // Session continuity — lets `pmp recap` say what happened since you were
+    // last here, so opening the IDE never feels like starting from zero.
+    session: {
+      lastRecapAt: null,
+      snapshot: null, // { pct, phase, doneIds, parked } at end of last session
+    },
     // Phase 8 — Improvement: filled in at completion
     retro: null,
     completedAt: null,
@@ -92,6 +98,7 @@ function migrate(state) {
     outcome: { ...base.outcome, ...(state.outcome || {}) },
     scope: { ...base.scope, ...(state.scope || {}) },
     schedule: { ...base.schedule, ...(state.schedule || {}) },
+    session: { ...base.session, ...(state.session || {}) },
   };
 }
 

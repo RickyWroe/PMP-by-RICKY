@@ -28,6 +28,14 @@ import {
   chooseNextAction,
 } from "../src/checkin.js";
 import { osNotify, speak, scheduleDaily, unscheduleDaily } from "../src/notify.js";
+import { buildRecap, renderRecap, recordSession } from "../src/recap.js";
+import {
+  requirePhasesThrough,
+  requireAcceptance,
+  validateDependencies,
+  requireDepsDone,
+} from "../src/guards.js";
+import { installClaudeMd, installSessionHook, recapCommand } from "../src/ide.js";
 
 const CLI_PATH = url.fileURLToPath(import.meta.url);
 const argv = process.argv.slice(2);
@@ -47,6 +55,9 @@ async function main() {
     case "status":
     case undefined:
       return cmdStatus();
+    case "recap":
+    case "resume":
+      return cmdRecap();
     case "next":
       return cmdNext();
     case "checkin":
@@ -64,6 +75,8 @@ async function main() {
       return cmdScope(rest);
     case "notify":
       return cmdNotify(rest);
+    case "ide":
+      return cmdIde();
     case "log":
       return cmdLog();
     case "complete":
@@ -136,7 +149,26 @@ async function cmdInit() {
   reconcilePhase(state);
   save(state);
 
-  console.log("\n  ✓ Saved to .pmpartner/project.json\n");
+  console.log("\n  ✓ Saved to .pmpartner/project.json");
+
+  // IDE integration: every future session in this project opens with a recap,
+  // and the agent gets standing orders to follow the PM discipline.
+  if (!flags["no-ide"]) {
+    const recapCmd = recapCommand(CLI_PATH);
+    const md = installClaudeMd(process.cwd(), recapCmd);
+    console.log(`  ✓ Wrote PM discipline block → ${path.relative(process.cwd(), md)}`);
+    const hook = installSessionHook(process.cwd(), recapCmd);
+    if (hook.ok) {
+      console.log(
+        `  ✓ SessionStart recap hook → ${path.relative(process.cwd(), hook.file)}` +
+          (hook.added === false ? " (already present)" : ""),
+      );
+    } else {
+      console.log(`  ⚠ Skipped hook: ${hook.reason}`);
+    }
+  }
+
+  console.log("");
   console.log("  Next steps:");
   console.log("    pmp deliverable add   — break the outcome into pieces (phases 2–5)");
   console.log("    pmp scope freeze      — lock scope when the list feels complete (phase 6)");
@@ -193,6 +225,24 @@ function cmdStatus() {
   console.log("");
 }
 
+// ---- recap (session orientation) --------------------------------------------
+
+// Designed to run at IDE session start (hook-safe: exits 0 even when not set up).
+function cmdRecap() {
+  if (!exists()) {
+    console.log(
+      "\n  ◆ PM Partner: not set up in this project yet. Run `pmp init` to define the finish line.\n",
+    );
+    return;
+  }
+  const state = load();
+  reconcilePhase(state);
+  const recap = buildRecap(state);
+  console.log(renderRecap(recap));
+  recordSession(state);
+  save(state);
+}
+
 // ---- next / checkin --------------------------------------------------------
 
 function cmdNext() {
@@ -239,6 +289,8 @@ async function cmdDeliverable(args) {
   const state = load();
 
   if (sub === "add") {
+    // Best practice: never break down work before "Done" is defined (phase 1).
+    requirePhasesThrough(state, 1, "add deliverables");
     const id = nextDeliverableId(state);
     const headless = !canPrompt() || flags.title;
     let title, doneWhen, owner, effort, risk, dependsOn;
@@ -259,6 +311,10 @@ async function cmdDeliverable(args) {
       console.log(`\n  New deliverable ${id} (phases 2–5):`);
       title = (await rl.question("  Title: ")).trim();
       doneWhen = (await rl.question("  Done when (acceptance criterion): ")).trim();
+      while (!doneWhen) {
+        console.log("  (Required — without it, 'done' is a feeling, not a fact.)");
+        doneWhen = (await rl.question("  Done when: ")).trim();
+      }
       owner = (await rl.question("  Owner — (a)i can do it / (h)uman judgment [h]: "))
         .trim()
         .toLowerCase()
@@ -283,6 +339,10 @@ async function cmdDeliverable(args) {
         ? depRaw.split(",").map((x) => x.trim().toUpperCase()).filter(Boolean)
         : [];
     }
+
+    // Never assume: acceptance criterion is mandatory, dependencies must be real.
+    requireAcceptance(doneWhen, title || id);
+    validateDependencies(state, dependsOn, id);
 
     state.deliverables.push(
       newDeliverable({ id, title, doneWhen, owner, effort, risk, dependsOn }),
@@ -313,9 +373,23 @@ async function cmdDeliverable(args) {
   // status changes: start / done / block / todo <ID>
   const statusMap = { start: "doing", done: "done", block: "blocked", todo: "todo" };
   if (sub in statusMap) {
-    const id = (args[1] || "").toUpperCase();
+    const id = (args.find((a) => /^d\d+$/i.test(a)) || "").toUpperCase();
     const d = state.deliverables.find((x) => x.id === id);
-    if (!d) throw new Error(`No deliverable ${id}. See \`pmp deliverable list\`.`);
+    if (!d) throw new Error(`No deliverable ${id || "(missing ID)"}. See \`pmp deliverable list\`.`);
+
+    if (statusMap[sub] === "done") {
+      // Ship in dependency order — out-of-order "done" means a wrong map or fake-done.
+      requireDepsDone(state, d);
+      // Verify against the acceptance criterion — never assume it's met.
+      const confirmed = await confirmAcceptance(d);
+      if (!confirmed) {
+        console.log(
+          `\n  Not shipped. Verify the criterion first, then re-run \`pmp ship ${id} --yes\`.\n`,
+        );
+        return;
+      }
+    }
+
     d.status = statusMap[sub];
     reconcilePhase(state);
     save(state);
@@ -331,8 +405,28 @@ async function cmdDeliverable(args) {
 }
 
 function cmdShip(args) {
-  // Convenience alias: `pmp ship D2`
+  // Convenience alias: `pmp ship D2 --yes`
   return cmdDeliverable(["done", ...args]);
+}
+
+// "Done" must be verified against the acceptance criterion, once.
+// TTY: ask. Headless: require an explicit --yes (the caller affirms they checked).
+async function confirmAcceptance(d) {
+  console.log(`\n  ${d.id}: ${d.title}`);
+  console.log(`  Done when: ${d.doneWhen}`);
+  if (flags.yes) return true;
+  if (!canPrompt()) {
+    console.log(
+      "\n  PM discipline: shipping requires verification. If the criterion above is met, add --yes.",
+    );
+    return false;
+  }
+  const rl = readline.createInterface({ input: stdin, output: stdout });
+  const ans = (await rl.question("  Is this criterion actually met? (y/N): "))
+    .trim()
+    .toLowerCase();
+  rl.close();
+  return ans === "y" || ans === "yes";
 }
 
 // ---- outcome ---------------------------------------------------------------
@@ -394,6 +488,8 @@ function cmdScope(args) {
   const state = load();
   const sub = args[0];
   if (sub === "freeze") {
+    // Freezing an undefined or unbroken-down scope would lock in vagueness.
+    requirePhasesThrough(state, 2, "freeze scope");
     state.scope.frozen = true;
     reconcilePhase(state);
     save(state);
@@ -463,6 +559,23 @@ async function cmdNotify(args) {
       `${state.schedule.voice ? " (voice on)" : ""}\n` +
       "  pmp notify setup --time 08:30 | off | test\n",
   );
+}
+
+// ---- ide ---------------------------------------------------------------------
+
+// (Re)install the IDE orientation layer into this project.
+function cmdIde() {
+  load(); // ensures pmp is initialized here before wiring hooks
+  const recapCmd = recapCommand(CLI_PATH);
+  const md = installClaudeMd(process.cwd(), recapCmd);
+  const hook = installSessionHook(process.cwd(), recapCmd);
+  console.log(`\n  ✓ PM discipline block → ${path.relative(process.cwd(), md)}`);
+  console.log(
+    hook.ok
+      ? `  ✓ SessionStart recap hook → ${path.relative(process.cwd(), hook.file)}${hook.added === false ? " (already present)" : ""}`
+      : `  ⚠ Hook skipped: ${hook.reason}`,
+  );
+  console.log("\n  Every new IDE session here will now open with `pmp recap`.\n");
 }
 
 // ---- log -------------------------------------------------------------------
@@ -558,10 +671,13 @@ function help() {
     pmp notify setup [--time]    Turn on the daily push
 
   Daily
+    pmp recap                    Where are we? Detects last session, diffs progress,
+                                 names the phase + single next action (auto-runs at
+                                 IDE session start via the installed hook)
     pmp checkin [--notify]       Your 1-decision nudge + log it (phase 7)
     pmp next                     Just the next action, nothing else
     pmp status                   Where everything stands
-    pmp ship <ID>                Mark a deliverable done
+    pmp ship <ID> --yes          Mark done (only after verifying its "done when")
 
   Manage
     pmp deliverable start|done|block|todo <ID>
@@ -569,8 +685,14 @@ function help() {
     pmp profile [set adhd,...]
     pmp scope [freeze|park "..."|list]
     pmp notify [setup|off|test]
+    pmp ide                      (Re)install the IDE session-recap hook + CLAUDE.md rules
     pmp log                      Check-in history
     pmp complete                 Retro + close out (phase 8)
+
+  Discipline (always on — the CLI refuses, with reasons):
+    · no deliverables before "Done" is defined        · no "done when" → no deliverable
+    · dependencies must exist                          · no shipping out of dependency order
+    · no shipping without verifying the criterion      · frozen scope → ideas go to the parking lot
 `);
 }
 
