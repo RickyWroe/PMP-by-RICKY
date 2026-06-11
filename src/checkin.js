@@ -4,6 +4,7 @@
 import { actionable, progress, isComplete } from "./state.js";
 import { currentPhase } from "./phases.js";
 import { coach } from "./psychology.js";
+import { purple, purpleBold, deep, dim, bold } from "./style.js";
 
 const EFFORT_RANK = { S: 0, M: 1, L: 2 };
 
@@ -97,21 +98,23 @@ export function renderNudge(nudge) {
   const lines = [];
   const p = nudge.progress;
   lines.push("");
-  lines.push(`  ▌ ${nudge.project}`);
+  lines.push(`  ${purpleBold("▌")} ${bold(nudge.project)}`);
   lines.push(
-    `  ▌ ${bar(p.pct)}  ${p.pct}%  (${p.done}/${p.total} shipped) · phase ${nudge.phase}/8`,
+    `  ${purpleBold("▌")} ${bar(p.pct)}  ${purple(`${p.pct}%`)}  ${dim(
+      `(${p.done}/${p.total} shipped) · phase ${nudge.phase}/8`,
+    )}`,
   );
   lines.push("");
-  lines.push(`  → ${nudge.action}`);
+  lines.push(`  ${purpleBold("→")} ${bold(nudge.action)}`);
   lines.push("");
-  lines.push(`  “${nudge.reframe}”`);
+  lines.push(`  ${purple(`“${nudge.reframe}”`)}`);
   if (nudge.guardrails.length) {
     lines.push("");
-    for (const g of nudge.guardrails) lines.push(`  · ${g}`);
+    for (const g of nudge.guardrails) lines.push(`  ${purple("·")} ${dim(g)}`);
   }
   if (nudge.profiles.length) {
     lines.push("");
-    lines.push(`  tuned for: ${nudge.profiles.join(", ")}`);
+    lines.push(`  ${dim(`tuned for: ${nudge.profiles.join(", ")}`)}`);
   }
   lines.push("");
   return lines.join("\n");
@@ -130,7 +133,7 @@ export function nudgeSpeech(nudge) {
 
 function bar(pct, width = 20) {
   const filled = Math.round((pct / 100) * width);
-  return "█".repeat(filled) + "░".repeat(width - filled);
+  return deep("█".repeat(filled)) + dim("░".repeat(width - filled));
 }
 
 function truncate(s, n) {
