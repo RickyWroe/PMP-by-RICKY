@@ -1,0 +1,6 @@
+node_modules/
+*.log
+.DS_Store
+# The PM Partner's own state belongs to the *host* project, not this repo.
+# But ignore it here so test runs don't get committed.
+/.pmpartner/
