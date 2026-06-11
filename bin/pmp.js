@@ -597,7 +597,8 @@ async function cmdShell(args) {
   const snippet = path.join(path.dirname(CLI_PATH), "..", "shell", "pmp.zsh");
   const START = "# >>> pm-partner >>>";
   const END = "# <<< pm-partner <<<";
-  const block = `${START}\n[ -f '${snippet}' ] && source '${snippet}'\n${END}\n`;
+  const esc = (s) => s.replace(/'/g, "'\\''");
+  const block = `${START}\n[ -f '${esc(snippet)}' ] && source '${esc(snippet)}'\n${END}\n`;
 
   let content = fs.existsSync(zshrc) ? fs.readFileSync(zshrc, "utf8") : "";
 

@@ -37,13 +37,10 @@ const AGENTS = [
   {
     name: "cursor",
     detect: (r) => fs.existsSync(path.join(r, ".cursor")) || fs.existsSync(path.join(r, ".cursorrules")),
-    file: (r) => {
-      if (fs.existsSync(path.join(r, ".cursor"))) {
-        fs.mkdirSync(path.join(r, ".cursor", "rules"), { recursive: true });
-        return path.join(r, ".cursor", "rules", "pm-partner.md");
-      }
-      return path.join(r, ".cursorrules");
-    },
+    file: (r) =>
+      fs.existsSync(path.join(r, ".cursor"))
+        ? path.join(r, ".cursor", "rules", "pm-partner.md")
+        : path.join(r, ".cursorrules"),
   },
   {
     name: "windsurf",
@@ -141,7 +138,8 @@ export function installSessionHook(projectRoot, recapCmd) {
 // Quotes survive spaces in paths ("PM Partner"). `|| true` keeps the hook
 // from ever failing a session.
 export function recapCommand(cliPath) {
-  return `command -v pmp >/dev/null && pmp recap || '${process.execPath}' '${cliPath}' recap || true`;
+  const esc = (s) => s.replace(/'/g, "'\\''");
+  return `command -v pmp >/dev/null && pmp recap || '${esc(process.execPath)}' '${esc(cliPath)}' recap || true`;
 }
 
 function stateBlock(state) {
@@ -189,6 +187,7 @@ export function writeStateBlock(projectRoot, state) {
     try {
       if (!agent.detect(projectRoot)) continue;
       const filePath = agent.file(projectRoot);
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
       const content = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : "";
       fs.writeFileSync(filePath, upsertBlock(content, block, STATE_START, STATE_END));
     } catch {
