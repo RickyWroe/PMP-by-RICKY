@@ -1,9 +1,11 @@
-# PMP — PM Partner
+# PMP by RICKY
 
 ```
 █▀█ █▀▄▀█ █▀█
 █▀▀ █ ▀ █ █▀▀   finish what you started.
 ```
+
+> PM Partner — an installable project-completion partner that lives inside your project until it's Done.
 
 ---
 
@@ -26,7 +28,7 @@ It never assumes. It never lets you lie to it. It never asks you to make more th
 **Install once per machine:**
 
 ```bash
-git clone <this-repo> pm-partner && cd pm-partner
+git clone https://github.com/RickyWroe/PMP-by-RICKY.git && cd PMP-by-RICKY
 ./install.sh          # links `pmp` into ~/.local/bin
 pmp shell install     # optional: every terminal greets you with the recap
 ```
