@@ -456,8 +456,12 @@ async function cmdDeliverable(args) {
       console.log(
         `  ${d.id} [${d.status}] ${d.title}\n     done when: ${d.doneWhen || "—"}` +
           `  · ${d.owner}/${d.effort}/${d.risk}` +
+          `  · ${d.evidenceType === "sample" ? "sample evidence OK" : "real evidence"}` +
           (d.dependsOn.length ? `  · after ${d.dependsOn.join(",")}` : ""),
       );
+      for (const c of d.notDoneIf || []) {
+        console.log(`     not done if: ${c}`);
+      }
     }
     console.log("");
     return;
@@ -474,13 +478,9 @@ async function cmdDeliverable(args) {
       // Ship in dependency order — out-of-order "done" means a wrong map or fake-done.
       requireDepsDone(state, d);
       // Verify against the acceptance criterion — never assume it's met.
+      // confirmAcceptance prints the reason for every refusal path itself.
       const confirmed = await confirmAcceptance(d, state);
-      if (!confirmed) {
-        console.log(
-          `\n  Not shipped. Verify the criterion first, then re-run \`pmp ship ${id} --yes\`.\n`,
-        );
-        return;
-      }
+      if (!confirmed) return;
     }
 
     d.status = statusMap[sub];
@@ -514,8 +514,8 @@ async function confirmAcceptance(d, state) {
   // "Not done if..." — walk each negative blocker before the final confirm.
   if (d.notDoneIf && d.notDoneIf.length) {
     if (flags.yes) {
-      console.log(`\n  ${dim("Negative blockers (--yes bypassed interactive check):")}`);
-      d.notDoneIf.forEach((c) => console.log(`    ${dim("✗")} ${c}`));
+      console.log(`\n  ${bold("⚠ --yes affirms NONE of these blockers apply:")}`);
+      d.notDoneIf.forEach((c) => console.log(`    ${purple("✗")} ${c}`));
     } else if (canPrompt()) {
       const rl = readline.createInterface({ input: stdin, output: stdout });
       console.log(`\n  Verify "${d.id}" is not blocked:`);
@@ -527,7 +527,10 @@ async function confirmAcceptance(d, state) {
         ]);
         if (still === "blocked") {
           rl.close();
-          console.log(`\n  Blocked. Resolve "${criterion}" first, then re-run.\n`);
+          console.log(
+            `\n  Not shipped — blocker still applies: "${criterion}".\n` +
+              `  Resolve it, then re-run \`pmp ship ${d.id}\`.\n`,
+          );
           return false;
         }
       }
@@ -549,7 +552,11 @@ async function confirmAcceptance(d, state) {
     { label: "No — not yet, back to work", value: "no" },
   ]);
   rl.close();
-  return ans === "yes";
+  if (ans !== "yes") {
+    console.log(`\n  Not shipped. Meet the criterion first, then re-run \`pmp ship ${d.id}\`.\n`);
+    return false;
+  }
+  return true;
 }
 
 // ---- outcome ---------------------------------------------------------------
