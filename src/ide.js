@@ -149,12 +149,16 @@ function stateBlock(state) {
   const doing   = state.deliverables.filter((d) => d.status === "doing");
   const todo    = state.deliverables.filter((d) => d.status === "todo");
 
+  const SCOPE_LABELS = { production: "Production strategy", test: "Test / validation", prototype: "Prototype" };
+  const scopeLabel = SCOPE_LABELS[state.project.scopeType] || "Production strategy";
+
   const lines = [
     STATE_START,
     `## PM Partner — Live Project State`,
     `*Auto-updated at session start — do not edit this block.*`,
     ``,
     `- **Project:** ${state.project.name}`,
+    `- **Scope type:** ${scopeLabel}`,
     `- **Phase:** ${ph.n} of 8 — ${ph.title}`,
     `- **Progress:** ${done}/${total} deliverables shipped (${pct}%)`,
     `- **Scope:** ${state.scope.frozen ? "Frozen ❄" : "Open"}`,

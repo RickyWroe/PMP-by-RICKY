@@ -1,6 +1,6 @@
 {
   "name": "pm-partner",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "An installable project-completion partner that lives inside your project and pushes you to finish it. Psychology-aware, daily nudges, Agile-lite.",
   "type": "module",
   "bin": {

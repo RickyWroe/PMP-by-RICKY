@@ -34,6 +34,7 @@ import {
   requireAcceptance,
   validateDependencies,
   requireDepsDone,
+  requireEvidenceQuality,
 } from "../src/guards.js";
 import { installClaudeMd, installSessionHook, recapCommand, writeStateBlock } from "../src/ide.js";
 import { purple, purpleBold, dim, bold, banner } from "../src/style.js";
@@ -99,6 +100,26 @@ async function main() {
   }
 }
 
+// ---- shared UI helpers -----------------------------------------------------
+
+// Present a numbered menu and return the selected option's value.
+// defaultIdx is 0-based. Pressing Enter picks the default.
+async function choose(rl, question, options, defaultIdx = 0) {
+  console.log(`\n  ${question}`);
+  options.forEach((opt, i) => {
+    const num = i === defaultIdx ? purpleBold(`${i + 1}.`) : dim(`${i + 1}.`);
+    const label = i === defaultIdx ? opt.label : dim(opt.label);
+    console.log(`    ${num} ${label}`);
+  });
+  while (true) {
+    const raw = (await rl.question(`\n  Choice [${defaultIdx + 1}]: `)).trim();
+    if (!raw) return options[defaultIdx].value;
+    const n = parseInt(raw, 10);
+    if (n >= 1 && n <= options.length) return options[n - 1].value;
+    console.log(`  Please enter 1–${options.length}.`);
+  }
+}
+
 // ---- init ------------------------------------------------------------------
 
 async function cmdInit() {
@@ -111,10 +132,21 @@ async function cmdInit() {
   const headless = !canPrompt() || flags.name || flags.outcome || flags.yes;
   const defName = path.basename(process.cwd());
 
+  const SCOPE_TYPES = [
+    { label: "Production strategy — real client, real evidence required", value: "production" },
+    { label: "Test / validation — sample evidence allowed for some deliverables", value: "test" },
+    { label: "Prototype — proof of concept, sample data is fine throughout", value: "prototype" },
+  ];
+
   let state;
   if (headless) {
     state = emptyState((flags.name || defName).toString());
     state.project.profile = parseProfiles(asStr(flags.profile));
+    state.project.scopeType = pick(
+      asStr(flags.scope).toLowerCase(),
+      ["production", "test", "prototype"],
+      "production",
+    );
     state.outcome.definition = asStr(flags.outcome);
     if (flags.criterion) state.outcome.doneCriteria.push(asStr(flags.criterion));
     if (flags.anti) state.outcome.antiGoals.push(asStr(flags.anti));
@@ -128,6 +160,8 @@ async function cmdInit() {
 
     const name = (await rl.question(`  Project name [${defName}]: `)).trim() || defName;
     state = emptyState(name);
+
+    state.project.scopeType = await choose(rl, "What kind of project is this?", SCOPE_TYPES);
 
     console.log("\n  Your profile tunes how I push you. Pick all that fit (comma-separated):");
     knownProfiles().forEach((k, i) => console.log(`    ${i + 1}. ${describeProfile(k)} (${k})`));
@@ -148,8 +182,12 @@ async function cmdInit() {
 
     const t = (await rl.question("  Daily push time [09:00]: ")).trim();
     if (/^\d{1,2}:\d{2}$/.test(t)) state.schedule.dailyTime = t;
-    const v = (await rl.question("  Speak nudges aloud? (y/N): ")).trim().toLowerCase();
-    state.schedule.voice = v === "y" || v === "yes";
+
+    state.schedule.voice =
+      (await choose(rl, "Speak nudges aloud via text-to-speech?", [
+        { label: "No", value: "no" },
+        { label: "Yes (macOS only)", value: "yes" },
+      ])) === "yes";
 
     rl.close();
   }
@@ -194,10 +232,14 @@ function cmdStatus() {
   const ph = currentPhase(state);
   const [b1, b2] = banner();
 
+  const SCOPE_LABELS = { production: "Production", test: "Test/Validation", prototype: "Prototype" };
+  const scopeLabel = SCOPE_LABELS[state.project.scopeType] || "Production";
+
   console.log("");
   console.log(`  ${b1}   ${purpleBold(state.project.name)}`);
   console.log(
     `  ${b2}   ${purpleBold(`${pct}%`)} ${dim(`${done}/${total} shipped`)}` +
+      dim(`  · ${scopeLabel}`) +
       (state.outcome.deadline ? dim(`  · due ${state.outcome.deadline}`) : "") +
       (state.scope.frozen ? `  ${purple("❄ scope locked")}` : ""),
   );
@@ -230,7 +272,12 @@ function cmdStatus() {
       const dep  = d.dependsOn.length ? `  ${purple("←")}${dim(d.dependsOn.join(","))}` : "";
       const id   = isDone ? dim(d.id) : isDoing ? purpleBold(d.id) : purple(d.id);
       const title = isDone ? dim(d.title) : isDoing ? bold(d.title) : d.title;
-      console.log(`    ${box} ${meta} ${id} ${title}${dep}`);
+      const evBadge = !isDone && d.evidenceType === "sample" ? dim(" [sample evidence]") : "";
+      const ndifBadge =
+        !isDone && d.notDoneIf && d.notDoneIf.length
+          ? dim(` · ${d.notDoneIf.length} blocker${d.notDoneIf.length > 1 ? "s" : ""}`)
+          : "";
+      console.log(`    ${box} ${meta} ${id} ${title}${evBadge}${ndifBadge}${dep}`);
     }
     console.log("");
   }
@@ -314,7 +361,7 @@ async function cmdDeliverable(args) {
     requirePhasesThrough(state, 1, "add deliverables");
     const id = nextDeliverableId(state);
     const headless = !canPrompt() || flags.title;
-    let title, doneWhen, owner, effort, risk, dependsOn;
+    let title, doneWhen, owner, effort, risk, dependsOn, evidenceType, notDoneIf;
 
     if (headless) {
       title = asStr(flags.title);
@@ -327,6 +374,14 @@ async function cmdDeliverable(args) {
         .split(",")
         .map((x) => x.trim().toUpperCase())
         .filter(Boolean);
+      evidenceType = pick(
+        asStr(flags.evidence).toLowerCase(),
+        ["real", "sample"],
+        "real",
+      );
+      notDoneIf = asStr(flags["not-done-if"])
+        ? [asStr(flags["not-done-if"])]
+        : [];
     } else {
       const rl = readline.createInterface({ input: stdin, output: stdout });
       console.log(`\n  New deliverable ${id} (phases 2–5):`);
@@ -336,24 +391,41 @@ async function cmdDeliverable(args) {
         console.log("  (Required — without it, 'done' is a feeling, not a fact.)");
         doneWhen = (await rl.question("  Done when: ")).trim();
       }
-      owner = (await rl.question("  Owner — (a)i can do it / (h)uman judgment [h]: "))
-        .trim()
-        .toLowerCase()
-        .startsWith("a")
-        ? "ai"
-        : "human";
-      effort = pick(
-        (await rl.question("  Effort S/M/L [M]: ")).trim().toUpperCase(),
-        ["S", "M", "L"],
-        "M",
-      );
-      risk = pick(
-        (await rl.question("  Risk low/med/high [low]: ")).trim().toLowerCase(),
-        ["low", "med", "high"],
-        "low",
-      );
+
+      owner = await choose(rl, "Who does this work?", [
+        { label: "Human judgment required", value: "human" },
+        { label: "AI can execute it", value: "ai" },
+      ]);
+
+      effort = await choose(rl, "Effort?", [
+        { label: "Small  (hours)", value: "S" },
+        { label: "Medium (days)", value: "M" },
+        { label: "Large  (week+)", value: "L" },
+      ], 1);
+
+      risk = await choose(rl, "Risk?", [
+        { label: "Low — well understood, unlikely to surprise", value: "low" },
+        { label: "Med — some unknowns", value: "med" },
+        { label: "High — likely to reveal new information", value: "high" },
+      ]);
+
+      evidenceType = await choose(rl, "Evidence quality for this deliverable?", [
+        { label: "Real evidence required — sample doesn't count toward done", value: "real" },
+        { label: "Sample / test data OK", value: "sample" },
+      ]);
+
+      console.log('\n  "Not done if…" blockers — negative criteria checked before shipping.');
+      console.log("  Example: Only one competitor ad was used");
+      console.log("  (blank line to finish)");
+      notDoneIf = [];
+      while (true) {
+        const line = (await rl.question(`  ${notDoneIf.length + 1}: `)).trim();
+        if (!line) break;
+        notDoneIf.push(line);
+      }
+
       const depRaw = (
-        await rl.question(`  Depends on (e.g. D1,D2 — blank if none): `)
+        await rl.question(`\n  Depends on (e.g. D1,D2 — blank if none): `)
       ).trim();
       rl.close();
       dependsOn = depRaw
@@ -366,7 +438,7 @@ async function cmdDeliverable(args) {
     validateDependencies(state, dependsOn, id);
 
     state.deliverables.push(
-      newDeliverable({ id, title, doneWhen, owner, effort, risk, dependsOn }),
+      newDeliverable({ id, title, doneWhen, notDoneIf, evidenceType, owner, effort, risk, dependsOn }),
     );
     reconcilePhase(state);
     save(state);
@@ -402,7 +474,7 @@ async function cmdDeliverable(args) {
       // Ship in dependency order — out-of-order "done" means a wrong map or fake-done.
       requireDepsDone(state, d);
       // Verify against the acceptance criterion — never assume it's met.
-      const confirmed = await confirmAcceptance(d);
+      const confirmed = await confirmAcceptance(d, state);
       if (!confirmed) {
         console.log(
           `\n  Not shipped. Verify the criterion first, then re-run \`pmp ship ${id} --yes\`.\n`,
@@ -431,10 +503,38 @@ function cmdShip(args) {
 }
 
 // "Done" must be verified against the acceptance criterion, once.
-// TTY: ask. Headless: require an explicit --yes (the caller affirms they checked).
-async function confirmAcceptance(d) {
+// TTY: walk through blockers then confirm. Headless: require explicit --yes.
+async function confirmAcceptance(d, state) {
   console.log(`\n  ${d.id}: ${d.title}`);
   console.log(`  Done when: ${d.doneWhen}`);
+
+  // Evidence quality guard — enforced regardless of TTY.
+  requireEvidenceQuality(d, state.project.scopeType || "production");
+
+  // "Not done if..." — walk each negative blocker before the final confirm.
+  if (d.notDoneIf && d.notDoneIf.length) {
+    if (flags.yes) {
+      console.log(`\n  ${dim("Negative blockers (--yes bypassed interactive check):")}`);
+      d.notDoneIf.forEach((c) => console.log(`    ${dim("✗")} ${c}`));
+    } else if (canPrompt()) {
+      const rl = readline.createInterface({ input: stdin, output: stdout });
+      console.log(`\n  Verify "${d.id}" is not blocked:`);
+      for (const criterion of d.notDoneIf) {
+        console.log(`\n  ${bold("✗ Not done if:")} ${criterion}`);
+        const still = await choose(rl, "Is this condition currently true?", [
+          { label: "No — this doesn't apply, we're clear", value: "clear" },
+          { label: "Yes — still true, can't ship yet", value: "blocked" },
+        ]);
+        if (still === "blocked") {
+          rl.close();
+          console.log(`\n  Blocked. Resolve "${criterion}" first, then re-run.\n`);
+          return false;
+        }
+      }
+      rl.close();
+    }
+  }
+
   if (flags.yes) return true;
   if (!canPrompt()) {
     console.log(
@@ -442,12 +542,14 @@ async function confirmAcceptance(d) {
     );
     return false;
   }
+
   const rl = readline.createInterface({ input: stdin, output: stdout });
-  const ans = (await rl.question("  Is this criterion actually met? (y/N): "))
-    .trim()
-    .toLowerCase();
+  const ans = await choose(rl, `Is "${d.doneWhen}" actually met?`, [
+    { label: "Yes — criterion is fully met, ship it", value: "yes" },
+    { label: "No — not yet, back to work", value: "no" },
+  ]);
   rl.close();
-  return ans === "y" || ans === "yes";
+  return ans === "yes";
 }
 
 // ---- outcome ---------------------------------------------------------------
@@ -508,6 +610,17 @@ function cmdProfile(args) {
 function cmdScope(args) {
   const state = load();
   const sub = args[0];
+  if (sub === "type") {
+    const t = (args[1] || "").toLowerCase();
+    const valid = ["production", "test", "prototype"];
+    if (!valid.includes(t)) {
+      throw new Error(`Usage: pmp scope type production|test|prototype\n  production — real evidence required\n  test       — some sample evidence OK\n  prototype  — proof of concept, samples fine`);
+    }
+    state.project.scopeType = t;
+    save(state);
+    console.log(`\n  ✓ Scope type → ${t}. Evidence enforcement updated.\n`);
+    return;
+  }
   if (sub === "freeze") {
     // Freezing an undefined or unbroken-down scope would lock in vagueness.
     requirePhasesThrough(state, 2, "freeze scope");

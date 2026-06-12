@@ -7,7 +7,7 @@ import path from "node:path";
 
 export const DIR = ".pmpartner";
 export const STATE_FILE = "project.json";
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export function stateDir(root = process.cwd()) {
   return path.join(root, DIR);
@@ -27,6 +27,8 @@ export function emptyState(name = path.basename(process.cwd())) {
     version: SCHEMA_VERSION,
     project: {
       name,
+      // "prototype" | "test" | "production" — governs evidence quality enforcement
+      scopeType: "production",
       createdAt: now,
       updatedAt: now,
       // Psychological profile — drives how the Partner talks to you.
@@ -91,6 +93,7 @@ export function save(state, root = process.cwd()) {
 // Forward-compatible: fill in any keys added in later versions.
 function migrate(state) {
   const base = emptyState(state?.project?.name);
+  const baseD = newDeliverable();
   return {
     ...base,
     ...state,
@@ -99,6 +102,8 @@ function migrate(state) {
     scope: { ...base.scope, ...(state.scope || {}) },
     schedule: { ...base.schedule, ...(state.schedule || {}) },
     session: { ...base.session, ...(state.session || {}) },
+    // Migrate individual deliverables to pick up new fields.
+    deliverables: (state.deliverables || []).map((d) => ({ ...baseD, ...d })),
   };
 }
 
@@ -114,6 +119,10 @@ export function newDeliverable(partial = {}) {
     id: partial.id,
     title: partial.title || "",
     doneWhen: partial.doneWhen || "", // concrete acceptance criterion
+    // "not done if" — negative blockers checked before shipping
+    notDoneIf: partial.notDoneIf || [],
+    // "real" blocks shipping on production projects when only sample evidence exists
+    evidenceType: partial.evidenceType || "real", // "real" | "sample"
     owner: partial.owner || "human", // "ai" | "human"
     effort: partial.effort || "M", // S | M | L
     risk: partial.risk || "low", // low | med | high
