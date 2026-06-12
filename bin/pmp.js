@@ -36,6 +36,7 @@ import {
   requireDepsDone,
 } from "../src/guards.js";
 import { installClaudeMd, installSessionHook, recapCommand, writeStateBlock } from "../src/ide.js";
+import { purple, purpleBold, dim, bold, banner } from "../src/style.js";
 
 const CLI_PATH = url.fileURLToPath(import.meta.url);
 const argv = process.argv.slice(2);
@@ -191,44 +192,50 @@ function cmdStatus() {
   reconcilePhase(state);
   const { done, total, pct } = progress(state);
   const ph = currentPhase(state);
+  const [b1, b2] = banner();
 
   console.log("");
-  console.log(`  ${state.project.name}`);
+  console.log(`  ${b1}   ${bold(state.project.name)}`);
   console.log(
-    `  ${pct}%  ${done}/${total} deliverables shipped` +
-      (state.outcome.deadline ? `  · due ${state.outcome.deadline}` : ""),
+    `  ${b2}   ${purple(`${pct}%`)} ${dim(`${done}/${total} deliverables shipped`)}` +
+      (state.outcome.deadline ? dim(`  · due ${state.outcome.deadline}`) : ""),
   );
   if (state.project.profile.length)
-    console.log(`  tuned for: ${state.project.profile.map(describeProfile).join(", ")}`);
+    console.log(`         ${dim("tuned for: " + state.project.profile.map(describeProfile).join(", "))}`);
   console.log("");
 
-  console.log("  Phases:");
+  console.log(`  ${dim("Phases:")}`);
   for (const p of PHASES) {
     const ok = p.isSatisfied(state);
-    const mark = ok ? "✓" : p.n === ph.n ? "▸" : "·";
-    console.log(`    ${mark} ${p.n}. ${p.title}`);
+    const isCurrent = p.n === ph.n;
+    const mark = ok ? purple("✓") : isCurrent ? purpleBold("▸") : dim("·");
+    const title = ok ? dim(`${p.n}. ${p.title}`) : isCurrent ? `${bold(String(p.n))}. ${p.title}` : dim(`${p.n}. ${p.title}`);
+    console.log(`    ${mark} ${title}`);
   }
   console.log("");
 
   if (state.deliverables.length) {
-    console.log("  Deliverables:");
+    console.log(`  ${dim("Deliverables:")}`);
     for (const d of state.deliverables) {
-      const box = { todo: "○", doing: "◐", done: "●", blocked: "✕" }[d.status] || "○";
-      const dep = d.dependsOn.length ? `  ←${d.dependsOn.join(",")}` : "";
-      console.log(
-        `    ${box} ${d.id} [${d.owner === "ai" ? "AI" : "you"}/${d.effort}/${d.risk}] ${d.title}${dep}`,
-      );
+      const isDone = d.status === "done";
+      const isDoing = d.status === "doing";
+      const isBlocked = d.status === "blocked";
+      const box = isDone ? purple("●") : isDoing ? purple("◐") : isBlocked ? bold("✕") : dim("○");
+      const meta = dim(`[${d.owner === "ai" ? "AI" : "you"}/${d.effort}/${d.risk}]`);
+      const dep = d.dependsOn.length ? dim(`  ←${d.dependsOn.join(",")}`) : "";
+      const title = isDone ? dim(`${d.id} ${d.title}`) : isDoing ? bold(`${d.id} ${d.title}`) : `${d.id} ${d.title}`;
+      console.log(`    ${box} ${meta} ${title}${dep}`);
     }
     console.log("");
   }
 
   if (state.scope.parkingLot.length) {
-    console.log(`  Parking lot (${state.scope.parkingLot.length} parked idea(s)) — protected scope`);
+    console.log(`  ${dim(`Parking lot (${state.scope.parkingLot.length} idea${state.scope.parkingLot.length > 1 ? "s" : ""} parked) — protected scope`)}`);
     console.log("");
   }
 
-  console.log(`  ▸ You're in phase ${ph.n}: ${ph.title}`);
-  console.log(`    ${ph.hint}`);
+  console.log(`  ${purpleBold("▸")} ${bold(`Phase ${ph.n}:`)} ${ph.title}`);
+  console.log(`    ${dim(ph.hint)}`);
   console.log("");
 }
 
